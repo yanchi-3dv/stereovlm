@@ -23,28 +23,12 @@ function setPressed(buttons, selected) {
   buttons.forEach(button => button.setAttribute('aria-pressed', String(button === selected)));
 }
 
-// The RoboCasa example comes from figures/assets/benchmark/provenance.json.
-const demoExamples = {
-  correspondence: {
-    question: 'Find the bottled water in the left image. Where is the same physical object in the right image?',
-    answer: '[336, 121, 389, 220]',
-    unit: 'Right-image bounding box · pixels'
-  },
-  disparity: {
-    question: 'What is the representative horizontal disparity of the bottled water between the left and right images?',
-    answer: '29.9',
-    unit: 'Normalized disparity · image width = 1000 (23.95 px at width 800)'
-  },
-  depth: {
-    question: 'With focal length fₓ = 267 px and baseline B = 0.06 m, what is the bottled water’s depth along the left-camera z-axis?',
-    answer: '0.669 m',
-    unit: 'Reference object-center depth · left-camera frame'
-  }
-};
+// DROID reference annotations from the benchmark manifest.
+const realDemoExamples = {"correspondence": {"question": "In the left stereo image, identify the orange plastic cup. Then locate the same physical object in the right stereo image and return its bounding box. Answer with the right-image bounding box only.", "answer": "[301, 180, 365, 256]", "unit": "Right-image bounding box · pixels"}, "disparity": {"question": "For the orange plastic cup in the left stereo image, provide its representative left-to-right horizontal disparity on the normalized scale where the image width equals 1000. Answer with the numeric value only.", "answer": "120.1", "unit": "Normalized disparity · image width = 1000 (96.11 px at width 800)"}, "depth": {"question": "Stereo camera calibration for this displayed pair: fx=267 pixels, baseline=0.120103 meters.\nUsing the rectified stereo pair and the provided camera calibration, estimate the depth of the orange plastic cup in the left stereo image along the camera's optical axis. Answer with the numeric depth value in meters only.", "answer": "0.334 m", "unit": "Reference depth · left-camera optical axis"}};
 const demoButtons = [...document.querySelectorAll('[data-demo]')];
 demoButtons.forEach(button => button.addEventListener('click', () => {
   setPressed(demoButtons, button);
-  const sample = demoExamples[button.dataset.demo];
+  const sample = realDemoExamples[button.dataset.demo];
   document.getElementById('demo-question').textContent = sample.question;
   document.getElementById('demo-answer').textContent = sample.answer;
   document.getElementById('demo-unit').textContent = sample.unit;
@@ -161,4 +145,26 @@ methodSceneButtons.forEach(button => button.addEventListener('click', () => {
   document.querySelectorAll('[data-method-panel]').forEach(panel => {
     panel.hidden = panel.dataset.methodPanel !== button.dataset.methodScene;
   });
+}));
+
+// Point samples and 3D answers copied from local benchmark annotations.
+const pointQA = {"correspondence": {"question": "For the highlighted point (329, 243) in the left image, where is the corresponding point in the right image?", "answer": "(277.04, 243.00)", "unit": "Right-image coordinates \u00b7 pixels", "left": [329, 243], "right": [277.04051208496094, 243.0], "reference": {"xy": [329, 243], "gt_disparity_px": 51.95948791503906, "gt_right_xy_px": [277.04051208496094, 243.0], "gt_depth_m": 0.6169329285621643}}, "disparity": {"question": "What is the horizontal disparity of the highlighted point (546, 234) in the left image?", "answer": "41.65 px", "unit": "Horizontal disparity \u00b7 pixels", "left": [546, 234], "right": [504.3473358154297, 234.0], "reference": {"xy": [546, 234], "gt_disparity_px": 41.65266418457031, "gt_right_xy_px": [504.3473358154297, 234.0], "gt_depth_m": 0.7695910930633545}}, "depth": {"question": "What is the metric depth of the highlighted point (387, 262) in the left image along the camera optical axis?", "answer": "0.582 m", "unit": "Optical-axis depth \u00b7 meters", "left": [387, 262], "right": [331.88425064086914, 262.0], "reference": {"xy": [387, 262], "gt_disparity_px": 55.11574935913086, "gt_right_xy_px": [331.88425064086914, 262.0], "gt_depth_m": 0.5816035866737366}}};
+const reasoningQA = {"box": {"question": "Rectified-left camera calibration: fx=267, fy=267 pixels; baseline=0.120044 meters. The principal point is at the image center.\nProvide the 3D OBB for the silver toaster in the left stereo image. Answer with the 3D bounding box and object label only.", "answer": "Toaster", "center": "Center (m): 0.185, -0.048, 0.888", "size": "Size (m): 0.222, 0.104, 0.175", "full": [{"bbox_3d": [0.185009, -0.047659, 0.887993, 0.222496, 0.104405, 0.174517, 2.986158, -1.993758, 0.267478, 267.0, 0.0, 400.0, 0.0, 267.0, 160.0], "label": "toaster"}]}, "target": {"question": "Stereo camera calibration: fx = fy = 267 px; baseline = 0.120044 m; principal point at the image center.\nWhich object should the robot manipulate to perform the following task? Return its label and 3D oriented bounding box.\nTask: Open or close slidable objects (ex: toaster, drawers, sliding doors, dressers)", "answer": "Toaster", "center": "Center (m): 0.185, -0.048, 0.888", "size": "Size (m): 0.222, 0.104, 0.175", "full": [{"bbox_3d": [0.185009, -0.047659, 0.887993, 0.222496, 0.104405, 0.174517, 2.986158, -1.993758, 0.267478, 267.0, 0.0, 400.0, 0.0, 267.0, 160.0], "label": "toaster"}]}};
+
+const pointButtons = [...document.querySelectorAll('[data-point-task]')];
+pointButtons.forEach(button => button.addEventListener('click', () => {
+  setPressed(pointButtons, button);
+  const sample = pointQA[button.dataset.pointTask];
+  ['question','answer','unit'].forEach(key => document.getElementById(`point-${key}`).textContent = sample[key]);
+  document.querySelectorAll('#point-qa .qa-point').forEach((dot,i) => {
+    const xy = i === 0 ? sample.left : sample.right;
+    dot.setAttribute('cx',xy[0]); dot.setAttribute('cy',xy[1]);
+  });
+}));
+const reasoningButtons = [...document.querySelectorAll('[data-reasoning-task]')];
+reasoningButtons.forEach(button => button.addEventListener('click', () => {
+  setPressed(reasoningButtons, button);
+  const sample = reasoningQA[button.dataset.reasoningTask];
+  ['question','answer','center','size'].forEach(key => document.getElementById(`reasoning-${key}`).textContent = sample[key]);
+  document.getElementById('reasoning-full').textContent = JSON.stringify(sample.full,null,2);
 }));
