@@ -1,0 +1,8 @@
+.DS_Store
+*.pdf
+*.tex
+*.bib
+*.zip
+*.tar.gz
+server-config.json
+internal-preview.json
