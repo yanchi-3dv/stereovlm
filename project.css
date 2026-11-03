@@ -1,6 +1,6 @@
 /* Research project presentation, inspired by the UniT paper page. */
 :root{--bg:#f5f2ea;--surface:#faf8f1;--soft:#eeeae1;--line:#d8d4c9;--display:'Chakra Petch',var(--body)}
-:root[data-theme=dark]{--bg:#181a17;--surface:#20231e;--soft:#272a24;--line:#3b3e34}
+/* Dark palette is defined with the shared theme tokens in styles.css. */
 .paper-hero{height:auto;margin:0;border:0;overflow:visible}
 .paper-hero:after{display:none}
 .paper-hero .hero-inner{width:min(1060px,calc(100% - 48px));height:auto;padding:66px 0 32px;align-items:center;text-align:center}
@@ -276,3 +276,18 @@
 .qa-full-answer summary{color:var(--accent)}
 .qa-full-answer pre{white-space:pre-wrap;overflow-wrap:anywhere;font:11px/1.5 var(--mono);padding:10px 0;margin:0}
 @media(max-width:760px){#point-qa .demo-tabs button,#reasoning-qa .demo-tabs button{font-size:11px}.details-content>.qa-level-intro{font-size:13px}.details-content>h3:not(:first-child){margin-top:28px;padding-top:20px}}
+
+
+/* Average follows the same gain scale and alignment as individual benchmarks. */
+#transfer .transfer-row.transfer-average{border:0;padding:0;margin-top:18px}
+#transfer .transfer-row.transfer-average>span{font-size:inherit;color:inherit}
+#transfer .transfer-row.transfer-average>strong{display:block;margin:0;font:400 12px/1.5 var(--mono);letter-spacing:0;color:var(--geometry-dark);text-align:right}
+@media(max-width:600px){#transfer .transfer-row.transfer-average>strong{font-size:11px}}
+
+/* Align the paired result panels at both the heading and the bottom edge. */
+@media(min-width:761px){
+ #transfer .action-panel{display:flex;flex-direction:column}
+ #transfer .action-panel .action-numbers{margin-top:5px}
+ #transfer .action-panel .action-gain{align-self:flex-start}
+ #transfer .action-panel>p{margin-top:auto;padding-top:20px}
+}

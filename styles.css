@@ -4,7 +4,7 @@
 @font-face{font-family:'Chakra Petch';src:url('assets/chakra-regular.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap}
 @font-face{font-family:'Chakra Petch';src:url('assets/chakra-bold.ttf') format('truetype');font-weight:700;font-style:normal;font-display:swap}
 :root{--bg:#f5f2ea;--surface:#faf8f1;--soft:#eeeae1;--ink:#191815;--muted:#6d6b62;--line:#d8d4c9;--accent:#6f4dba;--accent-dark:#553698;--accent-wash:#ece6f5;--geometry:#6e9637;--geometry-dark:#527626;--geometry-wash:#e6ecd9;--body:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;--display:'Chakra Petch',var(--body);--mono:SFMono-Regular,Consolas,'Liberation Mono',monospace;color-scheme:light}
-:root[data-theme=dark]{--bg:#181a17;--surface:#20231e;--soft:#272a24;--ink:#e9e7dc;--muted:#aaa99d;--line:#3b3e34;--accent:#baa1ea;--accent-dark:#d1bdf2;--accent-wash:#30283e;--geometry:#a7c879;--geometry-dark:#bbd493;--geometry-wash:#2b3522;color-scheme:dark}
+:root[data-theme=dark]{--bg:#252422;--surface:#2d2b28;--soft:#35322e;--ink:#eeeae2;--muted:#b8b2a8;--line:#48443e;--accent:#b7a0dc;--accent-dark:#c7b2e8;--accent-wash:#39313f;--geometry:#98b56e;--geometry-dark:#aec78d;--geometry-wash:#333b2c;color-scheme:dark}
 *{box-sizing:border-box}
 html{scroll-behavior:auto;scroll-padding-top:100px}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 var(--body);-webkit-font-smoothing:antialiased}
@@ -82,7 +82,7 @@ svg{display:block}
 .paper-figure{border:0;border-radius:0;background:var(--bg);padding:0;overflow:hidden;isolation:isolate}
 /* Blend white diagram canvases into the page without rewriting source assets. */
 .paper-figure img{mix-blend-mode:multiply}
-[data-theme=dark] .paper-figure{background:#e5e2da;border-radius:5px;padding:16px}
+[data-theme=dark] .paper-figure{background:#e5e2da;border-radius:0;padding:0}
 .paper-figure a{display:block}
 .paper-figure img{width:100%;height:auto}
 .geometry-stage{border:1px solid var(--line);border-radius:7px;background:var(--surface);overflow:hidden;box-shadow:none}
@@ -306,7 +306,7 @@ svg{display:block}
  .figure-block+.reading{margin-top:26px}
  .figure-caption{font-size:11px;line-height:1.75;margin-top:11px}
  .paper-figure{padding:0;border-radius:0}
- [data-theme=dark] .paper-figure{padding:8px;border-radius:4px}
+ [data-theme=dark] .paper-figure{padding:0;border-radius:0}
  .geometry-stage{border-radius:5px}
  .stage-top{padding:11px 12px;font-size:10px;line-height:1.45;gap:10px}
  .stage-source{display:none}
@@ -556,3 +556,15 @@ svg{display:block}
  .method-scene-tabs{display:grid;grid-template-columns:1fr 1fr;width:100%;gap:3px}
  .method-scene-tabs button{font-size:11px;padding:7px 8px}
 }
+
+/* Dark mode keeps the light layout and the original photographic/depth colors. */
+[data-theme=dark] .bar-fill{background:#85877d}
+[data-theme=dark] .bar-row.accent .bar-fill,[data-theme=dark] .transfer-row .bar-fill{background:var(--geometry)}
+[data-theme=dark] .depth-tile img{outline-color:var(--line)}
+[data-theme=dark] .depth-tile.ours img{outline-color:var(--geometry)}
+[data-theme=dark] .depth-viewer{background:#24212b;border-color:var(--line)}
+[data-theme=dark] .paper-hero .hero-links a:not(.primary-resource){background:var(--surface)}
+
+/* Dedicated dark vectors preserve all embedded photographic and depth pixels. */
+[data-theme=dark] .paper-figure{background:var(--bg)}
+[data-theme=dark] .paper-figure img[data-theme-figure]{mix-blend-mode:normal}

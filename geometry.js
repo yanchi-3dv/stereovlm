@@ -1,140 +1,96 @@
 'use strict';
 
-// A visualization of an image-space depth field, not a calibrated point-cloud
-// reconstruction or model output. x/y are normalized image coordinates and z
-// is dataset reference depth. The three display axes are scaled for legibility.
+// Calibrated XYZ coordinates use one shared scale on all axes.
+// The optional legacy conversion is also a pinhole back-projection, not a depth height field.
 (() => {
   const canvas = document.getElementById('depth-canvas');
-  const points = window.STEREO_DEPTH_FIELD;
+  const data = window.STEREO_POINT_CLOUD;
+  const legacy = window.STEREO_DEPTH_FIELD;
+  const points = data?.points || legacy?.map(p => {
+    const u = Math.round((p[0] * 400 + 400) / 3) * 3;
+    const v = Math.round((p[1] * 400 + 160) / 3) * 3;
+    return [(u - 400) * p[2] / 267, (v - 160) * p[2] / 267, p[2], p[3], p[2]];
+  });
   if (!canvas || !points?.length) return;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
-
-  let yaw = -0.28;
-  let pitch = 0.26;
-  let colorMode = 'depth';
-  let width = 0;
-  let height = 0;
-  let drag = null;
-  let frame = null;
-
+  const initial = {yaw: -0.22, pitch: 0.62};
+  let yaw = initial.yaw, pitch = initial.pitch;
+  let colorMode = 'rgb', width = 0, height = 0, drag = null, frame = null;
+  const depths = points.map(p => p[4]).sort((a,b) => a-b);
+  const nearDepth = depths[Math.floor(depths.length * .03)];
+  const depthSpan = Math.max(.01,depths[Math.floor(depths.length * .97)] - nearDepth);
   const colors = points.map(p => {
-    const t = Math.max(0, Math.min(1, (p[2] - 0.25) / 1.65));
-    const near = [181, 218, 137];
-    const far = [161, 133, 219];
+    const t = Math.max(0,Math.min(1,(p[4]-nearDepth)/depthSpan));
+    const near = [181,218,137], far = [161,133,219];
     return [
-      `rgba(${near.map((value, i) => Math.round(value + (far[i] - value) * t)).join(',')},0.83)`,
-      `rgba(${p[3] >> 16},${(p[3] >> 8) & 255},${p[3] & 255},0.93)`
+      `rgb(${near.map((n,i)=>Math.round(n+(far[i]-n)*t)).join(',')})`,
+      `rgb(${p[3] >> 16},${(p[3] >> 8) & 255},${p[3] & 255})`
     ];
   });
-
-  function project(x, y, z) {
-    const a = x * Math.cos(yaw) + z * Math.sin(yaw);
-    const b = -x * Math.sin(yaw) + z * Math.cos(yaw);
-    const c = y * Math.cos(pitch) - b * Math.sin(pitch);
-    const distance = y * Math.sin(pitch) + b * Math.cos(pitch);
-    const scale = Math.min(width * 0.405, height * 0.82);
-    const perspective = 3.8 / (3.8 + distance * 0.35);
-    return [width * 0.50 + a * scale * perspective,
-      height * 0.51 + c * scale * perspective, distance, perspective];
-  }
-
-  function line(start, end) {
-    const a = project(...start);
-    const b = project(...end);
-    ctx.beginPath();
-    ctx.moveTo(a[0], a[1]);
-    ctx.lineTo(b[0], b[1]);
-    ctx.stroke();
-  }
-
   function render() {
     frame = null;
-    ctx.clearRect(0, 0, width, height);
-    const glow = ctx.createRadialGradient(width * 0.52, height * 0.58, 0,
-      width * 0.52, height * 0.58, width * 0.53);
-    glow.addColorStop(0, '#8f70b511');
-    glow.addColorStop(1, '#25213200');
-    ctx.fillStyle = glow;
-    ctx.fillRect(0, 0, width, height);
-
-    ctx.strokeStyle = '#9982b020';
-    ctx.lineWidth = 0.6;
-    for (let i = -6; i <= 6; i++) {
-      const offset = i * 0.22;
-      line([offset, 0.58, -0.45], [offset, 0.58, 1.25]);
-    }
-    for (let i = 0; i <= 8; i++) {
-      const offset = i * 0.22 - 0.45;
-      line([-1.32, 0.58, offset], [1.32, 0.58, offset]);
-    }
-
-    const projected = points.map((p, i) => ({
-      screen: project(p[0], p[1] * 1.1, (p[2] - 0.72) * 0.92), i
-    })).sort((a, b) => b.screen[2] - a.screen[2]);
-    const radius = Math.max(0.75, Math.min(1.25, width / 500));
-    for (const point of projected) {
-      const [x, y, , perspective] = point.screen;
-      if (y < 39 || y > height - 28 || x < 6 || x > width - 6) continue;
-      ctx.fillStyle = colors[point.i][colorMode === 'rgb' ? 1 : 0];
-      const r = radius * perspective;
-      ctx.fillRect(x, y, r * 1.25, r * 1.25);
+    if (!width || !height) return;
+    ctx.clearRect(0,0,width,height);
+    const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+    let xmin=Infinity,xmax=-Infinity,ymin=Infinity,ymax=-Infinity;
+    const projected = points.map((p,i) => {
+      const x=p[0]*cy+p[2]*sy, z=-p[0]*sy+p[2]*cy;
+      const y=p[1]*cp-z*sp, distance=p[1]*sp+z*cp;
+      xmin=Math.min(xmin,x);xmax=Math.max(xmax,x);ymin=Math.min(ymin,y);ymax=Math.max(ymax,y);
+      return {x,y,distance,i};
+    });
+    // Robust framing excludes distant outliers from camera bounds only.
+    // All points retain their measured XYZ and remain in the rendered scene.
+    const xs=projected.map(p=>p.x).sort((a,b)=>a-b);
+    const ys=projected.map(p=>p.y).sort((a,b)=>a-b);
+    const lo=Math.floor(points.length*.02), hi=Math.floor(points.length*.98);
+    xmin=xs[lo];xmax=xs[hi];ymin=ys[lo];ymax=ys[hi];
+    // Orthographic camera with a uniform XYZ scale: parallel planes remain planes.
+    const scale=Math.min((width-34)/Math.max(.01,xmax-xmin),(height-88)/Math.max(.01,ymax-ymin));
+    const ox=width/2-(xmin+xmax)*scale/2, oy=(height+10)/2-(ymin+ymax)*scale/2;
+    projected.sort((a,b)=>b.distance-a.distance);
+    const size=Math.max(1.3,Math.min(2.4,width/260));
+    for (const p of projected) {
+      ctx.fillStyle=colors[p.i][colorMode==='rgb'?1:0];
+      ctx.fillRect(ox+p.x*scale-size/2,oy+p.y*scale-size/2,size,size);
     }
   }
-
-  function schedule() {
-    if (frame === null) frame = requestAnimationFrame(render);
+  function schedule(){if(frame===null)frame=requestAnimationFrame(render);}
+  function resize(){
+    const box=canvas.getBoundingClientRect();width=box.width;height=box.height;
+    const ratio=Math.min(window.devicePixelRatio||1,2);
+    canvas.width=Math.round(width*ratio);canvas.height=Math.round(height*ratio);
+    ctx.setTransform(ratio,0,0,ratio,0,0);schedule();
   }
-
-  function resize() {
-    const box = canvas.getBoundingClientRect();
-    width = box.width;
-    height = box.height;
-    const ratio = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = Math.round(width * ratio);
-    canvas.height = Math.round(height * ratio);
-    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-    schedule();
-  }
-
-  canvas.addEventListener('pointerdown', event => {
-    drag = { x: event.clientX, y: event.clientY, yaw, pitch };
-    canvas.setPointerCapture(event.pointerId);
+  canvas.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,yaw,pitch};canvas.setPointerCapture(e.pointerId);});
+  canvas.addEventListener('pointermove',e=>{
+    if(!drag)return;
+    yaw=Math.max(-1.3,Math.min(1.3,drag.yaw+(e.clientX-drag.x)*.006));
+    pitch=Math.max(-.4,Math.min(1.2,drag.pitch+(e.clientY-drag.y)*.005));schedule();
   });
-  canvas.addEventListener('pointermove', event => {
-    if (!drag) return;
-    yaw = Math.max(-1.1, Math.min(1.1, drag.yaw + (event.clientX - drag.x) * 0.006));
-    pitch = Math.max(-0.65, Math.min(0.75, drag.pitch + (event.clientY - drag.y) * 0.005));
+  ['pointerup','pointercancel','lostpointercapture'].forEach(event=>canvas.addEventListener(event,()=>drag=null));
+  function reset(){yaw=initial.yaw;pitch=initial.pitch;schedule();}
+  canvas.addEventListener('keydown',e=>{
+    if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home'].includes(e.key))return;
+    e.preventDefault();
+    if(e.key==='Home')reset();
+    if(e.key==='ArrowLeft')yaw=Math.max(-1.3,yaw-.08);
+    if(e.key==='ArrowRight')yaw=Math.min(1.3,yaw+.08);
+    if(e.key==='ArrowUp')pitch=Math.max(-.4,pitch-.08);
+    if(e.key==='ArrowDown')pitch=Math.min(1.2,pitch+.08);
     schedule();
   });
-  const release = () => { drag = null; };
-  canvas.addEventListener('pointerup', release);
-  canvas.addEventListener('pointercancel', release);
-  canvas.addEventListener('lostpointercapture', release);
-  canvas.addEventListener('keydown', event => {
-    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home'].includes(event.key)) return;
-    event.preventDefault();
-    if (event.key === 'Home') { yaw = -0.28; pitch = 0.26; }
-    if (event.key === 'ArrowLeft') yaw = Math.max(-1.1, yaw - 0.08);
-    if (event.key === 'ArrowRight') yaw = Math.min(1.1, yaw + 0.08);
-    if (event.key === 'ArrowUp') pitch = Math.max(-0.65, pitch - 0.08);
-    if (event.key === 'ArrowDown') pitch = Math.min(0.75, pitch + 0.08);
-    schedule();
+  const buttons=[...document.querySelectorAll('[data-color]')];
+  buttons.forEach(button=>{
+    button.setAttribute('aria-pressed',String(button.dataset.color===colorMode));
+    button.addEventListener('click',()=>{
+      colorMode=button.dataset.color;
+      buttons.forEach(other=>other.setAttribute('aria-pressed',String(other===button)));schedule();
+    });
   });
-
-  const colorButtons = [...document.querySelectorAll('[data-color]')];
-  colorButtons.forEach(button => button.addEventListener('click', () => {
-    colorMode = button.dataset.color;
-    colorButtons.forEach(other => other.setAttribute('aria-pressed', String(other === button)));
-    schedule();
-  }));
-  document.getElementById('reset-view').addEventListener('click', () => {
-    yaw = -0.28;
-    pitch = 0.26;
-    schedule();
-  });
-
-  if ('ResizeObserver' in window) new ResizeObserver(resize).observe(canvas);
-  else window.addEventListener('resize', resize);
+  document.getElementById('reset-view').addEventListener('click',reset);
+  if('ResizeObserver' in window)new ResizeObserver(resize).observe(canvas);
+  else window.addEventListener('resize',resize);
   resize();
 })();

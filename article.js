@@ -15,9 +15,13 @@
 
   function updateThemeButton() {
     const dark = root.dataset.theme === 'dark';
+    document.querySelectorAll('[data-theme-figure]').forEach(image => {
+      const source = dark ? image.dataset.darkSrc : image.dataset.lightSrc;
+      if (image.getAttribute('src') !== source) image.src = source;
+    });
     toggle.setAttribute('aria-pressed', String(dark));
     toggle.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
-    document.querySelector('meta[name="theme-color"]').content = dark ? '#181a17' : '#f5f2ea';
+    document.querySelector('meta[name="theme-color"]').content = getComputedStyle(root).getPropertyValue('--bg').trim();
   }
 
   toggle.addEventListener('click', () => {
