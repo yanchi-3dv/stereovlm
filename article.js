@@ -15,9 +15,17 @@
 
   function updateThemeButton() {
     const dark = root.dataset.theme === 'dark';
-    document.querySelectorAll('[data-theme-figure]').forEach(image => {
-      const source = dark ? image.dataset.darkSrc : image.dataset.lightSrc;
-      if (image.getAttribute('src') !== source) image.src = source;
+    // Separate image elements let CSS hide the light bitmap immediately,
+    // even while the dark SVG is still loading or navigation code is delayed.
+    document.querySelectorAll('.paper-figure a').forEach(link => {
+      const image = link.querySelector('[data-theme-figure="dark"]');
+      if (!image) return;
+      if (!link.dataset.lightHref) link.dataset.lightHref = link.getAttribute('href');
+      link.href = dark ? image.getAttribute('src') : link.dataset.lightHref;
+      if (!link.dataset.lightLabel) link.dataset.lightLabel = link.getAttribute('aria-label') || '';
+      link.setAttribute('aria-label', dark
+        ? link.dataset.lightLabel.replace(/PDF|image|figure/g, 'dark figure')
+        : link.dataset.lightLabel);
     });
     toggle.setAttribute('aria-pressed', String(dark));
     toggle.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');

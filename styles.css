@@ -568,3 +568,8 @@ svg{display:block}
 /* Dedicated dark vectors preserve all embedded photographic and depth pixels. */
 [data-theme=dark] .paper-figure{background:var(--bg)}
 [data-theme=dark] .paper-figure img[data-theme-figure]{mix-blend-mode:normal}
+
+/* Never retain the light bitmap while a dark figure is downloading. */
+.paper-figure img[data-theme-figure="dark"]{display:none}
+[data-theme=dark] .paper-figure img[data-theme-figure="light"]{display:none}
+[data-theme=dark] .paper-figure img[data-theme-figure="dark"]{display:block}
